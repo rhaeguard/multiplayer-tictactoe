@@ -1,41 +1,44 @@
 import styled from "styled-components";
 import { useEffect, useState } from "react";
 
+const TicTacToeButtonStyle = styled.button`
+    width: 100px;
+    height: 100px;
+    outline: none;
+    border: none;
+    background-color: ${(props) => props.colors.bgColor};
+    color: ${(props) => props.colors.textColor};
+    margin: 2%;
+    font-size: 2.5em;
+    font-family: "Abril Fatface", cursive, "Franklin Gothic Medium",
+        "Arial Narrow", Arial, sans-serif;
+`;
+
+const BLUE = "#033860";
+const WHITE = "white";
+
 export const TicTacToeButton = ({ playerSymbol, notify }) => {
     const [colors, setColor] = useState({
-        bgColor: "white",
-        textColor: "#033860",
+        bgColor: WHITE,
+        textColor: BLUE,
     });
-
-    const TicTacToeButtonStyle = styled.button`
-        width: 100px;
-        height: 100px;
-        outline: none;
-        border: none;
-        background-color: ${colors.bgColor};
-        color: ${colors.textColor};
-        margin: 2%;
-        font-size: 2.5em;
-        font-family: "Abril Fatface", cursive, "Franklin Gothic Medium",
-            "Arial Narrow", Arial, sans-serif;
-    `;
 
     useEffect(() => {
         setColor(
             playerSymbol === " "
                 ? {
-                      bgColor: "white",
-                      textColor: "#033860",
+                      bgColor: WHITE,
+                      textColor: BLUE,
                   }
                 : {
-                      textColor: "white",
-                      bgColor: "#033860",
+                      bgColor: BLUE,
+                      textColor: WHITE,
                   }
         );
     }, [playerSymbol]);
 
     return (
-        <TicTacToeButtonStyle onClick={notify}>
+        <TicTacToeButtonStyle colors={colors} onClick={notify}>
             {playerSymbol}
         </TicTacToeButtonStyle>
     );

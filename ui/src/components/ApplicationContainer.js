@@ -31,11 +31,11 @@ const Header = styled.div`
     justify-content: center;
 `;
 
-export const ApplicationContainer = ({children, metaInfo}) => {
+export const ApplicationContainer = ({children, displayInfo}) => {
     return (
         <Application>
-            <LeftContainer color={metaInfo.playerOne.color}>
-                <h1>{metaInfo.playerOne.title}</h1>
+            <LeftContainer color={displayInfo.playerOne.color}>
+                <h1>{displayInfo.playerOne.title}</h1>
             </LeftContainer>
             <MiddleContainer>
                 <Header>
@@ -43,8 +43,8 @@ export const ApplicationContainer = ({children, metaInfo}) => {
                 </Header>
                 {children}
             </MiddleContainer>
-            <RightContainer color={metaInfo.playerTwo.color}>
-                <h1>{metaInfo.playerTwo.title}</h1>
+            <RightContainer color={displayInfo.playerTwo.color}>
+                <h1>{displayInfo.playerTwo.title}</h1>
             </RightContainer>
         </Application>
     )
