@@ -1,37 +1,7 @@
-import { useState } from "react";
 import styled from "styled-components";
-import { useEffect } from "react";
-
-const Application = styled.div`
-    display: grid;
-    grid-template-columns: 20% 60% 20%;
-    height: 100vh;
-`;
-
-const LeftContainer = styled.div`
-    background-color: ${(props) => props.color};
-    text-align: center;
-`;
-
-const RightContainer = styled.div`
-    background-color: ${(props) => props.color};
-    text-align: center;
-`;
-
-const MiddleContainer = styled.div`
-    background-color: lightgray;
-    display: grid;
-    grid-template-rows: 20% 80%;
-`;
-
-const Header = styled.div`
-    background-color: #033860;
-    text-align: center;
-    color: white;
-    font-size: 2.5em;
-    display: flex;
-    justify-content: center;
-`;
+import { useEffect, useState } from "react";
+import { TicTacToeButton } from "./TicTacToeButton";
+import { ApplicationContainer } from "./ApplicationContainer";
 
 const BoardWrapper = styled.div`
     background-color: #033860;
@@ -54,46 +24,6 @@ const BoardRow = styled.div`
     justify-content: center;
 `;
 
-const TicTacToeButton = ({ playerSymbol, notify }) => {
-    const [colors, setColor] = useState({
-        bgColor: "white",
-        textColor: "#033860",
-    });
-
-    const TicTacToeButtonStyle = styled.button`
-        width: 100px;
-        height: 100px;
-        outline: none;
-        border: none;
-        background-color: ${colors.bgColor};
-        color: ${colors.textColor};
-        margin: 2%;
-        font-size: 2.5em;
-        font-family: "Abril Fatface", cursive, "Franklin Gothic Medium",
-            "Arial Narrow", Arial, sans-serif;
-    `;
-
-    useEffect(() => {
-        setColor(
-            playerSymbol === " "
-                ? {
-                      bgColor: "white",
-                      textColor: "#033860",
-                  }
-                : {
-                      textColor: "white",
-                      bgColor: "#033860",
-                  }
-        );
-    }, [playerSymbol]);
-
-    return (
-        <TicTacToeButtonStyle onClick={notify}>
-            {playerSymbol}
-        </TicTacToeButtonStyle>
-    );
-};
-
 const ws = new WebSocket("ws://localhost:8888", "protocolOne");
 const winColor = `#8bc34a`;
 const lossColor = `#ff5722a6`;
@@ -115,46 +45,59 @@ export const Playground = () => {
         " ",
     ]);
 
-    const [sideColors, setSideColors] = useState({
-        left: resetColor,
-        right: resetColor,
+    const [metaInfo, setMetaInfo] = useState({
+        playerOne: {
+            title: "player 1",
+            color: resetColor,
+        },
+        playerTwo: {
+            title: "player 2",
+            color: resetColor,
+        },
     });
 
-    const [playerTitles, setPlayerTitles] = useState({
-        playerOne: "player 1",
-        playerTwo: "player 2",
-    });
-
-    const handleGameStop = ({ board, status, amPlayerOne }) => {
+    const handleGameUpdate = ({
+        board,
+        status,
+        amPlayerOne,
+        isBoardLocked,
+    }) => {
+        let p1Color, p2Color;
+        let p1Title, p2Title;
+        if (status === "draw") {
+            p1Color = drawColor;
+            p2Color = drawColor;
+            p1Title = `draw`;
+            p2Title = `draw`;
+        } else if (status === "win") {
+            p1Color = amPlayerOne ? winColor : lossColor;
+            p2Color = amPlayerOne ? lossColor : winColor;
+            p1Title = amPlayerOne ? `you won` : `opponent lost`;
+            p2Title = !amPlayerOne ? `you won` : `opponent lost`;
+        } else if (status === "loss") {
+            p1Color = amPlayerOne ? lossColor : winColor;
+            p2Color = amPlayerOne ? winColor : lossColor;
+            p1Title = amPlayerOne ? `you lost` : `opponent won`;
+            p2Title = !amPlayerOne ? `you lost` : `opponent won`;
+        } else {
+            p1Color = metaInfo.playerOne.color;
+            p2Color = metaInfo.playerTwo.color;
+            p1Title = amPlayerOne ? "you" : "opponent";
+            p2Title = !amPlayerOne ? "you" : "opponent";
+        }
+        setMetaInfo({
+            playerOne: {
+                title: p1Title,
+                color: p1Color,
+            },
+            playerTwo: {
+                title: p2Title,
+                color: p2Color,
+            },
+        });
         setFields(board);
         setIsPlayerOne(amPlayerOne);
-        setBoardLocked(true);
-        let left, right;
-        let playerOne, playerTwo;
-        if (status === "draw") {
-            left = drawColor;
-            right = drawColor;
-            playerOne = `draw`;
-            playerTwo = `draw`;
-        } else if (status === "win") {
-            left = amPlayerOne ? winColor : lossColor;
-            right = amPlayerOne ? lossColor : winColor;
-            playerOne = amPlayerOne ? `you won` : `opponent lost`;
-            playerTwo = !amPlayerOne ? `you won` : `opponent lost`;
-        } else if (status === "loss") {
-            left = amPlayerOne ? lossColor : winColor;
-            right = amPlayerOne ? winColor : lossColor;
-            playerOne = amPlayerOne ? `you lost` : `opponent won`;
-            playerTwo = !amPlayerOne ? `you lost` : `opponent won`;
-        }
-        setSideColors({
-            left,
-            right,
-        });
-        setPlayerTitles({
-            playerOne,
-            playerTwo
-        })
+        setBoardLocked(isBoardLocked);
     };
 
     useEffect(() => {
@@ -164,16 +107,22 @@ export const Playground = () => {
                 localStorage.setItem("id", data.id);
             } else if (type === "start") {
                 const { board, amPlayerOne, gameId, myTurn } = data;
-                setFields(board);
-                setIsPlayerOne(amPlayerOne);
-                setBoardLocked(!myTurn);
                 localStorage.setItem("gameId", gameId);
-                setPlayerTitles({
-                    playerOne: amPlayerOne ? 'you' : 'opponent',
-                    playerTwo: !amPlayerOne ? 'you' : 'opponent'
-                })
+
+                handleGameUpdate({
+                    board,
+                    amPlayerOne,
+                    status: "in_progress", // it's a status set by the ui, not the backend
+                    isBoardLocked: !myTurn,
+                });
             } else if (type === "stop") {
-                handleGameStop(data);
+                const { board, status, amPlayerOne } = data;
+                handleGameUpdate({
+                    board,
+                    amPlayerOne,
+                    status,
+                    isBoardLocked: true,
+                });
             }
         };
     }, []);
@@ -195,66 +144,55 @@ export const Playground = () => {
     };
 
     return (
-        <Application>
-            <LeftContainer color={sideColors.left}>
-                <h1>{playerTitles.playerOne}</h1>
-            </LeftContainer>
-            <MiddleContainer>
-                <Header>
-                    <h1>tictactoe</h1>
-                </Header>
-                <BoardWrapper>
-                    <Board>
-                        <BoardRow>
-                            <TicTacToeButton
-                                playerSymbol={fields[0]}
-                                notify={() => handleClick({ index: 0 })}
-                            />
-                            <TicTacToeButton
-                                playerSymbol={fields[1]}
-                                notify={() => handleClick({ index: 1 })}
-                            />
-                            <TicTacToeButton
-                                playerSymbol={fields[2]}
-                                notify={() => handleClick({ index: 2 })}
-                            />
-                        </BoardRow>
+        <ApplicationContainer metaInfo={metaInfo}>
+            <BoardWrapper>
+                <Board>
+                    <BoardRow>
+                        <TicTacToeButton
+                            playerSymbol={fields[0]}
+                            notify={() => handleClick({ index: 0 })}
+                        />
+                        <TicTacToeButton
+                            playerSymbol={fields[1]}
+                            notify={() => handleClick({ index: 1 })}
+                        />
+                        <TicTacToeButton
+                            playerSymbol={fields[2]}
+                            notify={() => handleClick({ index: 2 })}
+                        />
+                    </BoardRow>
 
-                        <BoardRow>
-                            <TicTacToeButton
-                                playerSymbol={fields[3]}
-                                notify={() => handleClick({ index: 3 })}
-                            />
-                            <TicTacToeButton
-                                playerSymbol={fields[4]}
-                                notify={() => handleClick({ index: 4 })}
-                            />
-                            <TicTacToeButton
-                                playerSymbol={fields[5]}
-                                notify={() => handleClick({ index: 5 })}
-                            />
-                        </BoardRow>
+                    <BoardRow>
+                        <TicTacToeButton
+                            playerSymbol={fields[3]}
+                            notify={() => handleClick({ index: 3 })}
+                        />
+                        <TicTacToeButton
+                            playerSymbol={fields[4]}
+                            notify={() => handleClick({ index: 4 })}
+                        />
+                        <TicTacToeButton
+                            playerSymbol={fields[5]}
+                            notify={() => handleClick({ index: 5 })}
+                        />
+                    </BoardRow>
 
-                        <BoardRow>
-                            <TicTacToeButton
-                                playerSymbol={fields[6]}
-                                notify={() => handleClick({ index: 6 })}
-                            />
-                            <TicTacToeButton
-                                playerSymbol={fields[7]}
-                                notify={() => handleClick({ index: 7 })}
-                            />
-                            <TicTacToeButton
-                                playerSymbol={fields[8]}
-                                notify={() => handleClick({ index: 8 })}
-                            />
-                        </BoardRow>
-                    </Board>
-                </BoardWrapper>
-            </MiddleContainer>
-            <RightContainer color={sideColors.right}>
-                <h1>{playerTitles.playerTwo}</h1>
-            </RightContainer>
-        </Application>
+                    <BoardRow>
+                        <TicTacToeButton
+                            playerSymbol={fields[6]}
+                            notify={() => handleClick({ index: 6 })}
+                        />
+                        <TicTacToeButton
+                            playerSymbol={fields[7]}
+                            notify={() => handleClick({ index: 7 })}
+                        />
+                        <TicTacToeButton
+                            playerSymbol={fields[8]}
+                            notify={() => handleClick({ index: 8 })}
+                        />
+                    </BoardRow>
+                </Board>
+            </BoardWrapper>
+        </ApplicationContainer>
     );
 };
