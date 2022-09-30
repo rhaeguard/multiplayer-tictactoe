@@ -1,6 +1,8 @@
 const { WebSocketServer } = require("ws");
 const { uuid } = require("uuidv4");
 
+require('dotenv').config();
+
 const isVictorious = (array) => {
     // 0 1 2
     // 3 4 5
@@ -67,7 +69,9 @@ async function main() {
         allSocketsByUserId[currentUserId].send(data);
     };
 
-    const wss = new WebSocketServer({ host: "127.0.0.1", port: 8888 });
+    const wss = new WebSocketServer({ host: process.env.WS_ENDPOINT, port: process.env.WS_PORT });
+
+    console.log(`Listening on ${process.env.WS_ENDPOINT}:${process.env.WS_PORT}...`)
 
     wss.on("connection", (ws) => {
         const currentUserId = uuid();

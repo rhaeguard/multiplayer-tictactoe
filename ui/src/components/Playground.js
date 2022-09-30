@@ -7,7 +7,7 @@ const LOSS_COLOR = `#ff5722a6`;
 const RESET_COLOR = "lightblue";
 const DRAW_COLOR = `#ff5722`;
 
-const ws = new WebSocket("ws://localhost:8888", "protocolOne");
+const ws = new WebSocket(`ws://${process.env.REACT_APP_WS_URL}:${process.env.REACT_APP_WS_PORT}`, "protocolOne");
 
 export const Playground = () => {
     const [isPlayerOne, setIsPlayerOne] = useState(true);
