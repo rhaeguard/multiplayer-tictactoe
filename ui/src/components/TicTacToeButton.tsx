@@ -37,7 +37,7 @@ export const TicTacToeButton: FC<TicTacToeButtonProps> = ({ playerSymbol, notify
 
     useEffect(() => {
         setColor(
-            playerSymbol === " "
+            playerSymbol.trim() === ""
                 ? {
                       bgColor: WHITE,
                       textColor: BLUE,
@@ -50,7 +50,7 @@ export const TicTacToeButton: FC<TicTacToeButtonProps> = ({ playerSymbol, notify
     }, [playerSymbol]);
 
     return (
-        <TicTacToeButtonStyle colors={colors} onClick={notify}>
+        <TicTacToeButtonStyle colors={colors} onClick={notify} role="board-button">
             {playerSymbol}
         </TicTacToeButtonStyle>
     );

@@ -7,22 +7,45 @@ const LOSS_COLOR = `#ff5722a6`;
 const RESET_COLOR = "lightblue";
 const DRAW_COLOR = `#ff5722`;
 
-const ws = new WebSocket(`ws://${process.env.REACT_APP_WS_URL}:${process.env.REACT_APP_WS_PORT}`, "protocolOne");
+const EMPTY_BOARD = [
+    " ",
+    " ",
+    " ",
+    " ",
+    " ",
+    " ",
+    " ",
+    " ",
+    " ",
+]
+
+const createWS = (): WebSocket =>  new WebSocket(`ws://${process.env.REACT_APP_WS_URL}:${process.env.REACT_APP_WS_PORT}`, "protocolOne");
+
+const ws = createWS();
+
+class GameUpdate {
+    board: string[];
+    status: string;
+    amPlayerOne: boolean;
+    isBoardLocked: boolean;
+
+    constructor(
+        board: string[],
+        status: string,
+        amPlayerOne: boolean,
+        isBoardLocked: boolean
+    ) {
+        this.board = board;
+        this.status = status;
+        this.amPlayerOne = amPlayerOne;
+        this.isBoardLocked = isBoardLocked;
+    }
+}
 
 export const Playground: FC = () => {
     const [isPlayerOne, setIsPlayerOne] = useState(true);
     const [isBoardLocked, setBoardLocked] = useState(true);
-    const [fields, setFields] = useState<string[]>([
-        " ",
-        " ",
-        " ",
-        " ",
-        " ",
-        " ",
-        " ",
-        " ",
-        " ",
-    ]);
+    const [fields, setFields] = useState<string[]>(EMPTY_BOARD);
 
     const [displayInfo, setDisplayInfo] = useState<DisplayInfo>({
         playerOne: {
@@ -35,17 +58,15 @@ export const Playground: FC = () => {
         },
     });
 
-    const handleGameUpdate = ({
-        board,
-        status,
-        amPlayerOne,
-        isBoardLocked,
-    }: {
-        board: string[],
-        status: string,
-        amPlayerOne: boolean,
-        isBoardLocked: boolean
-    }) => {
+    const handleGameUpdate = (data: GameUpdate) => {
+        console.log(data);
+        const {
+            board,
+            status,
+            amPlayerOne,
+            isBoardLocked,
+        } = data;
+
         let p1Color, p2Color;
         let p1Title, p2Title;
         if (status === "draw") {
@@ -92,12 +113,12 @@ export const Playground: FC = () => {
             const { board, amPlayerOne, gameId, myTurn } = data;
             sessionStorage.setItem("gameId", gameId);
 
-            handleGameUpdate({
+            handleGameUpdate(new GameUpdate(
                 board,
+                "in_progress", // it's a status set by the ui, not the backend
                 amPlayerOne,
-                status: "in_progress", // it's a status set by the ui, not the backend
-                isBoardLocked: !myTurn,
-            });
+                !myTurn
+            ));
         } else if (type === "stop") {
             const { board, status, amPlayerOne } = data;
             handleGameUpdate({
@@ -106,6 +127,13 @@ export const Playground: FC = () => {
                 status,
                 isBoardLocked: true,
             });
+
+            handleGameUpdate(new GameUpdate(
+                board,
+                status,
+                amPlayerOne,
+                true
+            ));
         }
     }
 

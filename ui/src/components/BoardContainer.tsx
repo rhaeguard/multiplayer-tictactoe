@@ -1,4 +1,4 @@
-import { FC } from "react";
+import { FC, ReactElement } from "react";
 import styled from "styled-components";
 import { TicTacToeButton } from "./TicTacToeButton";
 
@@ -28,55 +28,29 @@ interface BoardContainerProps {
     onClickCell: (index: number) => void
 }
 
-export const BoardContainer:FC<BoardContainerProps> = ({ fields, onClickCell }) => {
-    return (
-        <BoardWrapper>
-            <Board>
-                <BoardRow>
-                    <TicTacToeButton
-                        playerSymbol={fields[0]}
-                        notify={() => onClickCell(0)}
-                    />
-                    <TicTacToeButton
-                        playerSymbol={fields[1]}
-                        notify={() => onClickCell(1)}
-                    />
-                    <TicTacToeButton
-                        playerSymbol={fields[2]}
-                        notify={() => onClickCell(2)}
-                    />
-                </BoardRow>
+export const BoardContainer: FC<BoardContainerProps> = ({ fields, onClickCell }) => {
 
-                <BoardRow>
-                    <TicTacToeButton
-                        playerSymbol={fields[3]}
-                        notify={() => onClickCell(3)}
-                    />
-                    <TicTacToeButton
-                        playerSymbol={fields[4]}
-                        notify={() => onClickCell(4)}
-                    />
-                    <TicTacToeButton
-                        playerSymbol={fields[5]}
-                        notify={() => onClickCell(5)}
-                    />
-                </BoardRow>
+    const renderFields = (): ReactElement<typeof Board> => {
+        const elements: ReactElement[] = []
 
-                <BoardRow>
-                    <TicTacToeButton
-                        playerSymbol={fields[6]}
-                        notify={() => onClickCell(6)}
-                    />
-                    <TicTacToeButton
-                        playerSymbol={fields[7]}
-                        notify={() => onClickCell(7)}
-                    />
-                    <TicTacToeButton
-                        playerSymbol={fields[8]}
-                        notify={() => onClickCell(8)}
-                    />
-                </BoardRow>
+        for (let i = 0; i < 9; i++) {
+            elements.push(
+                <TicTacToeButton
+                    key={i}
+                    playerSymbol={fields[i]}
+                    notify={() => onClickCell(i)}
+                />
+            )
+        }
+
+        return <BoardWrapper role="board-wrapper">
+            <Board role="board">
+                <BoardRow key={1} role="board-row" >{elements.slice(0, 3)}</BoardRow>
+                <BoardRow key={2} role="board-row" >{elements.slice(3, 6)}</BoardRow>
+                <BoardRow key={3} role="board-row" >{elements.slice(6, 9)}</BoardRow>
             </Board>
         </BoardWrapper>
-    );
+    }
+
+    return renderFields()
 };
