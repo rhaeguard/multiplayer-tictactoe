@@ -1,7 +1,14 @@
 import styled from "styled-components";
-import { useEffect, useState } from "react";
+import { FC, MouseEventHandler, useEffect, useState } from "react";
 
-const TicTacToeButtonStyle = styled.button`
+interface TicTacToeButtonStyleProps {
+    colors: {
+        bgColor: string,
+        textColor: string
+    }
+}
+
+const TicTacToeButtonStyle = styled.button<TicTacToeButtonStyleProps>`
     width: 100px;
     height: 100px;
     outline: none;
@@ -17,7 +24,12 @@ const TicTacToeButtonStyle = styled.button`
 const BLUE = "#033860";
 const WHITE = "white";
 
-export const TicTacToeButton = ({ playerSymbol, notify }) => {
+interface TicTacToeButtonProps {
+    playerSymbol: string,
+    notify: MouseEventHandler
+}
+
+export const TicTacToeButton: FC<TicTacToeButtonProps> = ({ playerSymbol, notify }) => {
     const [colors, setColor] = useState({
         bgColor: WHITE,
         textColor: BLUE,

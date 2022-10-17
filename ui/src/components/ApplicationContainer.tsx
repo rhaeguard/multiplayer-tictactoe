@@ -1,3 +1,4 @@
+import { FC } from "react";
 import styled from "styled-components";
 
 const Application = styled.div`
@@ -31,7 +32,23 @@ const Header = styled.div`
     justify-content: center;
 `;
 
-export const ApplicationContainer = ({children, displayInfo}) => {
+export interface DisplayInfo {
+    playerOne: {
+        color: string,
+        title: string
+    },
+    playerTwo: {
+        color: string,
+        title: string
+    }
+}
+
+interface ApplicationContainerProps {
+    children: any,
+    displayInfo: DisplayInfo
+}
+
+export const ApplicationContainer:FC<ApplicationContainerProps> = ({children, displayInfo}) => {
     return (
         <Application>
             <LeftContainer color={displayInfo.playerOne.color}>

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { ApplicationContainer } from "./ApplicationContainer";
+import { FC, useEffect, useState } from "react";
+import { ApplicationContainer, DisplayInfo } from "./ApplicationContainer";
 import { BoardContainer } from "./BoardContainer";
 
 const WIN_COLOR = `#8bc34a`;
@@ -9,10 +9,10 @@ const DRAW_COLOR = `#ff5722`;
 
 const ws = new WebSocket(`ws://${process.env.REACT_APP_WS_URL}:${process.env.REACT_APP_WS_PORT}`, "protocolOne");
 
-export const Playground = () => {
+export const Playground: FC = () => {
     const [isPlayerOne, setIsPlayerOne] = useState(true);
     const [isBoardLocked, setBoardLocked] = useState(true);
-    const [fields, setFields] = useState([
+    const [fields, setFields] = useState<string[]>([
         " ",
         " ",
         " ",
@@ -24,7 +24,7 @@ export const Playground = () => {
         " ",
     ]);
 
-    const [displayInfo, setDisplayInfo] = useState({
+    const [displayInfo, setDisplayInfo] = useState<DisplayInfo>({
         playerOne: {
             title: "player 1",
             color: RESET_COLOR,
@@ -40,6 +40,11 @@ export const Playground = () => {
         status,
         amPlayerOne,
         isBoardLocked,
+    }: {
+        board: string[],
+        status: string,
+        amPlayerOne: boolean,
+        isBoardLocked: boolean
     }) => {
         let p1Color, p2Color;
         let p1Title, p2Title;
@@ -79,7 +84,7 @@ export const Playground = () => {
         setBoardLocked(isBoardLocked);
     };
 
-    const handleServerSentEvent = (event) => {
+    const handleServerSentEvent = (event: MessageEvent<string>) => {
         const { type, data } = JSON.parse(event.data);
         if (type === "register") {
             sessionStorage.setItem("id", data.id);
@@ -108,7 +113,7 @@ export const Playground = () => {
         ws.onmessage = handleServerSentEvent;
     }, []);
 
-    const handleClick = ({ index }) => {
+    const handleClick = (index: number) => {
         if (fields[index] === " " && !isBoardLocked) {
             ws.send(
                 JSON.stringify({
@@ -126,9 +131,9 @@ export const Playground = () => {
 
     return (
         <ApplicationContainer displayInfo={displayInfo}>
-            <BoardContainer 
-                fields={fields} 
-                onClickCell={handleClick}/>
+            <BoardContainer
+                fields={fields}
+                onClickCell={handleClick} />
         </ApplicationContainer>
     );
 };
