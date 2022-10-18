@@ -3,7 +3,7 @@ const { uuid } = require("uuidv4");
 
 require('dotenv').config();
 
-const isVictorious = (array) => {
+const getCurrentGameState = (array) => {
     // 0 1 2
     // 3 4 5
     // 6 7 8
@@ -39,12 +39,22 @@ const isVictorious = (array) => {
     return "in_progress";
 };
 
+const findGameId = (userId, allGameStates) => {
+    for (let id in allGameStates) {
+        if (allGameStates[id].playerOne === userId || allGameStates[id].playerTwo === userId) {
+            return id;
+        }
+    }
+    return null;
+}
+
 const createNewGame = (p1id, p2id) => {
     return {
         board: new Array(9).fill(" "),
         isPlayerOne: true,
         playerOne: p1id,
         playerTwo: p2id,
+        isFinished: false
     };
 };
 
@@ -66,7 +76,11 @@ async function main() {
     };
 
     const sendToUser = (currentUserId, data) => {
-        allSocketsByUserId[currentUserId].send(data);
+        if (allSocketsByUserId[currentUserId]) {
+            allSocketsByUserId[currentUserId].send(data);
+        } else {
+            console.log(`User[${currentUserId}] does not exist`)
+        }
     };
 
     const wss = new WebSocketServer({ host: process.env.WS_ENDPOINT, port: process.env.WS_PORT });
@@ -81,13 +95,32 @@ async function main() {
         allSocketsByUserId[currentUserId] = ws;
         currentlyUnmatchedUsers[currentUserId] = true;
 
+        console.log(`User[${currentUserId}] created`)
+
         ws.on("close", () => {
+            // the user disconnected which means the opponent has won!
+            const gameId = findGameId(currentUserId, gameStates);
+
+            if (!gameStates[gameId].isFinished) {
+                const opponentId = [gameStates[gameId].playerOne, gameStates[gameId].playerTwo].find((x) => x !== currentUserId)
+    
+                if (gameId) {
+                    sendToUser(opponentId, createNewMessage("stop", {
+                        board: gameStates[gameId].board,
+                        status: "win",
+                        amPlayerOne: gameStates[gameId].playerOne === opponentId,
+                    }))
+                }
+            }
+
             delete allSocketsByUserId[currentUserId];
             delete currentlyUnmatchedUsers[currentUserId];
+            console.log(`User[${currentUserId}] disconnected`)
         });
 
         const opponentId = findOpponentFor(currentUserId);
         if (opponentId) {
+            console.log(`User[${currentUserId}] found a matchup in ${opponentId}`)
             // match them up
             matchedUp[opponentId] = currentUserId;
             matchedUp[currentUserId] = opponentId;
@@ -117,10 +150,12 @@ async function main() {
                     myTurn: false,
                 })
             );
+
         }
 
         ws.on("message", (message) => {
             const { type, data } = JSON.parse(message);
+            console.log(`User[${currentUserId}] received a message: ${message}`)
             if (type === "update") {
                 const { userId, gameId, pos, char } = data;
                 gameStates[gameId].board[pos] = char;
@@ -129,7 +164,7 @@ async function main() {
                 let opponentData;
                 let currentSender;
 
-                const state = isVictorious(gameStates[gameId].board);
+                const state = getCurrentGameState(gameStates[gameId].board);
 
                 if (state === "in_progress") {
                     opponentData = createNewMessage("start", {
@@ -155,6 +190,9 @@ async function main() {
                         opponentStatus = "draw";
                         currentSenderStatus = "draw";
                     }
+
+                    // the game has finished
+                    gameStates[gameId].isFinished = true;
 
                     opponentData = createNewMessage("stop", {
                         board: gameStates[gameId].board,

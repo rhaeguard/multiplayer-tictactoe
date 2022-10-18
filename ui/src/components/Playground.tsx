@@ -8,15 +8,15 @@ const RESET_COLOR = "lightblue";
 const DRAW_COLOR = `#ff5722`;
 
 const EMPTY_BOARD = [
-    " ",
-    " ",
-    " ",
-    " ",
-    " ",
-    " ",
-    " ",
-    " ",
-    " ",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
 ]
 
 const createWS = (): WebSocket =>  new WebSocket(`ws://${process.env.REACT_APP_WS_URL}:${process.env.REACT_APP_WS_PORT}`, "protocolOne");
@@ -59,7 +59,6 @@ export const Playground: FC = () => {
     });
 
     const handleGameUpdate = (data: GameUpdate) => {
-        console.log(data);
         const {
             board,
             status,
@@ -121,13 +120,7 @@ export const Playground: FC = () => {
             ));
         } else if (type === "stop") {
             const { board, status, amPlayerOne } = data;
-            handleGameUpdate({
-                board,
-                amPlayerOne,
-                status,
-                isBoardLocked: true,
-            });
-
+            
             handleGameUpdate(new GameUpdate(
                 board,
                 status,
