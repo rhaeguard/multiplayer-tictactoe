@@ -101,7 +101,7 @@ async function main() {
             // the user disconnected which means the opponent has won!
             const gameId = findGameId(currentUserId, gameStates);
 
-            if (!gameStates[gameId].isFinished) {
+            if (gameId && !gameStates[gameId].isFinished) {
                 const opponentId = [gameStates[gameId].playerOne, gameStates[gameId].playerTwo].find((x) => x !== currentUserId)
     
                 if (gameId) {
