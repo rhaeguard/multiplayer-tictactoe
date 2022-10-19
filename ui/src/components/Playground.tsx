@@ -1,27 +1,15 @@
 import { FC, useEffect, useState } from "react";
 import { ApplicationContainer, DisplayInfo } from "./ApplicationContainer";
 import { BoardContainer } from "./BoardContainer";
+import { WebSocketContext } from "../websocket";
+import { useContext } from "react";
 
 const WIN_COLOR = `#8bc34a`;
 const LOSS_COLOR = `#ff5722a6`;
 const RESET_COLOR = "lightblue";
 const DRAW_COLOR = `#ff5722`;
 
-const EMPTY_BOARD = [
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-]
-
-const createWS = (): WebSocket =>  new WebSocket(`ws://${process.env.REACT_APP_WS_URL}:${process.env.REACT_APP_WS_PORT}`, "protocolOne");
-
-const ws = createWS();
+const EMPTY_BOARD = new Array(9).fill("");
 
 class GameUpdate {
     board: string[];
@@ -43,9 +31,14 @@ class GameUpdate {
 }
 
 export const Playground: FC = () => {
+    const { event, sendMessage, finalize } = useContext(WebSocketContext);
+
     const [isPlayerOne, setIsPlayerOne] = useState(true);
     const [isBoardLocked, setBoardLocked] = useState(true);
     const [fields, setFields] = useState<string[]>(EMPTY_BOARD);
+
+    const [userId, setUserId] = useState<string | null>(null);
+    const [gameId, setGameId] = useState<string | null>(null);
 
     const [displayInfo, setDisplayInfo] = useState<DisplayInfo>({
         playerOne: {
@@ -59,12 +52,7 @@ export const Playground: FC = () => {
     });
 
     const handleGameUpdate = (data: GameUpdate) => {
-        const {
-            board,
-            status,
-            amPlayerOne,
-            isBoardLocked,
-        } = data;
+        const { status, amPlayerOne } = data;
 
         let p1Color, p2Color;
         let p1Title, p2Title;
@@ -99,18 +87,19 @@ export const Playground: FC = () => {
                 color: p2Color,
             },
         });
-        setFields(board);
+        setFields(data.board);
         setIsPlayerOne(amPlayerOne);
-        setBoardLocked(isBoardLocked);
+        setBoardLocked(data.isBoardLocked);
     };
 
-    const handleServerSentEvent = (event: MessageEvent<string>) => {
-        const { type, data } = JSON.parse(event.data);
+    useEffect(() => {
+        // handle server sent event
+        const { type, data } = event;
         if (type === "register") {
-            sessionStorage.setItem("id", data.id);
+            setUserId(data.id);
         } else if (type === "start") {
             const { board, amPlayerOne, gameId, myTurn } = data;
-            sessionStorage.setItem("gameId", gameId);
+            setGameId(gameId);
 
             handleGameUpdate(new GameUpdate(
                 board,
@@ -120,33 +109,29 @@ export const Playground: FC = () => {
             ));
         } else if (type === "stop") {
             const { board, status, amPlayerOne } = data;
-            
+
             handleGameUpdate(new GameUpdate(
                 board,
                 status,
                 amPlayerOne,
                 true
             ));
-        }
-    }
 
-    useEffect(() => {
-        ws.onmessage = handleServerSentEvent;
-    }, []);
+            finalize();
+        }
+    }, [event])
 
     const handleClick = (index: number) => {
-        if (fields[index] === " " && !isBoardLocked) {
-            ws.send(
-                JSON.stringify({
-                    type: "update",
-                    data: {
-                        userId: sessionStorage.getItem("id"),
-                        gameId: sessionStorage.getItem("gameId"),
-                        pos: index,
-                        char: isPlayerOne ? "x" : "o",
-                    },
-                })
-            );
+        if (fields[index] === "" && !isBoardLocked) {
+            sendMessage({
+                type: "update",
+                data: {
+                    userId: userId,
+                    gameId: gameId,
+                    pos: index,
+                    char: isPlayerOne ? "x" : "o",
+                },
+            });
         }
     };
 

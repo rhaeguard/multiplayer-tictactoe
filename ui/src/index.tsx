@@ -3,11 +3,15 @@ import ReactDOM from "react-dom/client";
 import { Playground } from "./components/Playground";
 import "./index.css";
 import reportWebVitals from "./reportWebVitals";
+import { Provider } from "./websocket";
 
 const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
+
 root.render(
     <React.StrictMode>
-        <Playground />
+        <Provider>
+            <Playground />
+        </Provider>
     </React.StrictMode>
 );
 

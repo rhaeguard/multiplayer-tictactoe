@@ -1,5 +1,5 @@
 const { WebSocketServer } = require("ws");
-const { uuid } = require("uuidv4");
+const { v4: uuid } = require("uuid");
 
 require('dotenv').config();
 
@@ -9,7 +9,7 @@ const getCurrentGameState = (array) => {
     // 6 7 8
 
     const check = (pos) => {
-        const x = pos.map((p) => array[p]).filter((x) => x !== " ");
+        const x = pos.map((p) => array[p]).filter((x) => x !== "");
         return x.length === 3 && new Set(x).size === 1;
     };
 
@@ -33,7 +33,7 @@ const getCurrentGameState = (array) => {
 
     if (diag1 || diag2) return "win";
 
-    if (array.filter((x) => x === " ").length === 0) {
+    if (array.filter((x) => x === "").length === 0) {
         return "draw";
     }
     return "in_progress";
@@ -50,7 +50,7 @@ const findGameId = (userId, allGameStates) => {
 
 const createNewGame = (p1id, p2id) => {
     return {
-        board: new Array(9).fill(" "),
+        board: new Array(9).fill(""),
         isPlayerOne: true,
         playerOne: p1id,
         playerTwo: p2id,
@@ -76,9 +76,11 @@ async function main() {
     };
 
     const sendToUser = (currentUserId, data) => {
-        if (allSocketsByUserId[currentUserId]) {
+        try {
+            console.log(Object.keys(allSocketsByUserId))
             allSocketsByUserId[currentUserId].send(data);
-        } else {
+        } catch (err) {
+            console.log(err)
             console.log(`User[${currentUserId}] does not exist`)
         }
     };
@@ -95,7 +97,7 @@ async function main() {
         allSocketsByUserId[currentUserId] = ws;
         currentlyUnmatchedUsers[currentUserId] = true;
 
-        console.log(`User[${currentUserId}] created`)
+        console.log(`User[${currentUserId}] created: ${Object.keys(allSocketsByUserId)}`)
 
         ws.on("close", () => {
             // the user disconnected which means the opponent has won!
@@ -103,7 +105,7 @@ async function main() {
 
             if (gameId && !gameStates[gameId].isFinished) {
                 const opponentId = [gameStates[gameId].playerOne, gameStates[gameId].playerTwo].find((x) => x !== currentUserId)
-    
+
                 if (gameId) {
                     sendToUser(opponentId, createNewMessage("stop", {
                         board: gameStates[gameId].board,
@@ -155,9 +157,10 @@ async function main() {
 
         ws.on("message", (message) => {
             const { type, data } = JSON.parse(message);
-            console.log(`User[${currentUserId}] received a message: ${message}`)
             if (type === "update") {
                 const { userId, gameId, pos, char } = data;
+                console.log(`User[${userId}] received a message: ${message} : : ${Object.keys(allSocketsByUserId)}`)
+
                 gameStates[gameId].board[pos] = char;
 
                 const opponentId = matchedUp[userId];
