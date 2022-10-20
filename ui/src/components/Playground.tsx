@@ -41,11 +41,11 @@ export const Playground: FC = () => {
     const [gameId, setGameId] = useState<string | null>(null);
 
     const [displayInfo, setDisplayInfo] = useState<DisplayInfo>({
-        playerOne: {
+        left: {
             title: "player 1",
             color: RESET_COLOR,
         },
-        playerTwo: {
+        right: {
             title: "player 2",
             color: RESET_COLOR,
         },
@@ -72,17 +72,17 @@ export const Playground: FC = () => {
             p1Title = amPlayerOne ? "you lost" : "opponent won";
             p2Title = !amPlayerOne ? "you lost" : "opponent won";
         } else {
-            p1Color = displayInfo.playerOne.color;
-            p2Color = displayInfo.playerTwo.color;
+            p1Color = displayInfo.left.color;
+            p2Color = displayInfo.right.color;
             p1Title = amPlayerOne ? "you" : "opponent";
             p2Title = !amPlayerOne ? "you" : "opponent";
         }
         setDisplayInfo({
-            playerOne: {
+            left: {
                 title: p1Title,
                 color: p1Color,
             },
-            playerTwo: {
+            right: {
                 title: p2Title,
                 color: p2Color,
             },

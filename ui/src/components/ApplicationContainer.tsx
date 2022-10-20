@@ -79,11 +79,11 @@ const Header = styled.div`
 `;
 
 export interface DisplayInfo {
-    playerOne: {
+    left: {
         color: string,
         title: string
     },
-    playerTwo: {
+    right: {
         color: string,
         title: string
     }
@@ -100,7 +100,7 @@ const useWindowHeight: () => number = () => {
     });
 
     useEffect(() => {
-        const setResizedHeight = (e:UIEvent) => setHeight(window.innerHeight)
+        const setResizedHeight = (e: UIEvent) => setHeight(window.innerHeight)
 
         window.addEventListener('resize', setResizedHeight)
 
@@ -114,11 +114,11 @@ const useWindowHeight: () => number = () => {
 
 export const ApplicationContainer: FC<ApplicationContainerProps> = ({ children, displayInfo }) => {
     const height = useWindowHeight();
-    
+
     return (
         <Application height={height}>
-            <LeftContainer color={displayInfo.playerOne.color}>
-                <h1>{displayInfo.playerOne.title}</h1>
+            <LeftContainer color={displayInfo.left.color}>
+                <h1>{displayInfo.left.title}</h1>
             </LeftContainer>
             <MiddleContainer>
                 <Header>
@@ -126,10 +126,8 @@ export const ApplicationContainer: FC<ApplicationContainerProps> = ({ children, 
                 </Header>
                 {children}
             </MiddleContainer>
-            <RightContainer 
-            color={displayInfo.playerTwo.color}
-            >
-                <h1>{displayInfo.playerTwo.title}</h1>
+            <RightContainer color={displayInfo.right.color}>
+                <h1>{displayInfo.right.title}</h1>
             </RightContainer>
         </Application>
     )

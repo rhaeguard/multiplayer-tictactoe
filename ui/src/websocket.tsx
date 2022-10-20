@@ -31,7 +31,7 @@ export const Provider: FC<WSProviderProps> = ({ children }) => {
     useEffect(() => {
         if (!wsRef.current) {
             wsRef.current = createWS();
-            wsRef.current.onmessage = (event: any) => {
+            wsRef.current.onmessage = (event: MessageEvent<any>) => {
                 if (event && event.data) {
                     setEvent(JSON.parse(event.data));
                 }
