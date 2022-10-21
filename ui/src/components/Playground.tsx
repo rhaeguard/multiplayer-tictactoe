@@ -5,17 +5,24 @@ import { WebSocketContext } from "../websocket";
 import { useContext } from "react";
 import { RootState, useAppDispatch, useAppSelector } from "../store";
 import {
-    GameInfo, 
     updateGameState,
     updateUserId,
     updateGameId,
 } from '../reducers/gameInfoSlice';
 
 export const Playground: FC = () => {
-    const { event, sendMessage, finalize } = useContext(WebSocketContext);
+    const { sendMessage, event, finalize } = useContext(WebSocketContext);
 
-    const { isPlayerOne, isBoardLocked, userId, gameId, displayInfo, fields }: GameInfo = useAppSelector((state: RootState) => state.info);
     const dispatch = useAppDispatch();
+
+    const {
+        isPlayerOne,
+        isBoardLocked,
+        userId,
+        gameId,
+        displayInfo,
+        fields
+    } = useAppSelector((state: RootState) => state.info);
 
     useEffect(() => {
         // handle server sent event
@@ -44,7 +51,7 @@ export const Playground: FC = () => {
 
             finalize();
         }
-    }, [event])
+    }, [event]);
 
     const handleClick = (index: number) => {
         if (fields[index] === "" && !isBoardLocked) {

@@ -11,13 +11,16 @@ export interface EventData {
     data: any
 }
 
+export type MessagePayload = EventData;
+
 export interface SocketConnection {
     event: EventData,
-    sendMessage: (data: any) => void,
+    sendMessage: (data: MessagePayload) => void,
     finalize: () => void
 }
 
 const createWS = (): WebSocket => {
+    console.log(`ws://${process.env.REACT_APP_WS_URL}:${process.env.REACT_APP_WS_PORT}`)
     return new WebSocket(`ws://${process.env.REACT_APP_WS_URL}:${process.env.REACT_APP_WS_PORT}`)
 };
 

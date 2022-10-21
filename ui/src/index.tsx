@@ -4,14 +4,14 @@ import { Playground } from "./components/Playground";
 import "./index.css";
 import reportWebVitals from "./reportWebVitals";
 import { WebSocketConnectionProvider } from "./websocket";
-import store from './store';
+import { setupStore } from './store';
 import { Provider } from 'react-redux';
 
 const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
 
 root.render(
     <React.StrictMode>
-        <Provider store={store}>
+        <Provider store={setupStore()}>
             <WebSocketConnectionProvider>
                 <Playground />
             </WebSocketConnectionProvider>
