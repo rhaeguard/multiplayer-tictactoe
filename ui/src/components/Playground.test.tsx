@@ -22,7 +22,9 @@ function renderWithReduxProvider(
 ) {
     const Wrapper = ({ children }: PropsWithChildren<{}>) =>
         <Provider store={store}>
-            {children}
+            <WebSocketConnectionProvider>
+                {children}
+            </WebSocketConnectionProvider>
         </Provider>
 
     return {
@@ -66,11 +68,7 @@ describe('Playground', () => {
     })
 
     it('renders each cell empty initially', () => {
-        renderWithReduxProvider(
-            <WebSocketConnectionProvider>
-                <Playground />
-            </WebSocketConnectionProvider>
-        )
+        renderWithReduxProvider(<Playground />)
 
         // default initial state sets everything to empty
         const buttons = screen.getAllByRole('board-button');
@@ -87,10 +85,7 @@ describe('Playground', () => {
             "x", "x", "",
             "", "", ""];
 
-        renderWithReduxProvider(
-            <WebSocketConnectionProvider>
-                <Playground />
-            </WebSocketConnectionProvider>,
+        renderWithReduxProvider(<Playground />,
             {
                 preloadedState: {
                     info: {
@@ -114,7 +109,7 @@ describe('Playground', () => {
             }
         )
 
-        // default initial state sets everything to empty
+        // default initial state sets everything to the 'fields' array
         const buttons = screen.getAllByRole('board-button');
         expect(buttons).toHaveLength(9);
 
@@ -124,10 +119,7 @@ describe('Playground', () => {
     });
 
     it('triggers the correct function when we click on an empty cell', async () => {
-        renderWithReduxProvider(
-            <WebSocketConnectionProvider>
-                <Playground />
-            </WebSocketConnectionProvider>,
+        renderWithReduxProvider(<Playground />,
             {
                 preloadedState: {
                     info: {
@@ -176,10 +168,7 @@ describe('Playground', () => {
             "x", "x", "",
             "", "", ""];
 
-        renderWithReduxProvider(
-            <WebSocketConnectionProvider>
-                <Playground />
-            </WebSocketConnectionProvider>,
+        renderWithReduxProvider(<Playground />,
             {
                 preloadedState: {
                     info: {
@@ -215,10 +204,7 @@ describe('Playground', () => {
     });
 
     it('marks o when the current player is player two', async () => {
-        renderWithReduxProvider(
-            <WebSocketConnectionProvider>
-                <Playground />
-            </WebSocketConnectionProvider>,
+        renderWithReduxProvider(<Playground />,
             {
                 preloadedState: {
                     info: {
@@ -262,11 +248,7 @@ describe('Playground', () => {
     });
 
     it('handles server sent events correctly', async () => {
-        const { store } = renderWithReduxProvider(
-            <WebSocketConnectionProvider>
-                <Playground />
-            </WebSocketConnectionProvider>
-        )
+        const { store } = renderWithReduxProvider(<Playground />)
 
         await server.connected;
 
