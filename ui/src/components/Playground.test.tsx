@@ -4,7 +4,7 @@ import React, { PropsWithChildren } from 'react';
 import { AppStore, RootState, setupStore } from '../store';
 import { Provider } from 'react-redux';
 import { PreloadedState } from '@reduxjs/toolkit';
-import { EventData, MessagePayload, WebSocketConnectionProvider, WebSocketContext } from '../websocket';
+import { WebSocketConnectionProvider } from '../websocket';
 import WS from "jest-websocket-mock";
 
 interface ExtendedRenderOptions extends Omit<RenderOptions, 'queries'> {
@@ -32,23 +32,6 @@ function renderWithReduxProvider(
             ...renderOptions
         })
     }
-}
-
-interface FakeWebSocketConnectionProviderProps extends PropsWithChildren {
-    event: EventData,
-    sendMessage: (data: any) => void,
-    finalize: () => void,
-}
-
-const FakeWebSocketConnectionProvider: React.FC<FakeWebSocketConnectionProviderProps> = (props: FakeWebSocketConnectionProviderProps) => {
-    return <WebSocketContext.Provider value={{
-        event: props.event,
-        sendMessage: props.sendMessage,
-        finalize: props.finalize
-    }}>
-        { /*eslint-disable-next-line testing-library/no-node-access*/}
-        {props.children}
-    </WebSocketContext.Provider>
 }
 
 describe('Playground', () => {
@@ -83,18 +66,10 @@ describe('Playground', () => {
     })
 
     it('renders each cell empty initially', () => {
-        const event: EventData = {
-            type: 'dummy',
-            data: null
-        };
-
-        const sendMessage = (data: any) => { }
-        const finalize = () => { }
-
         renderWithReduxProvider(
-            <FakeWebSocketConnectionProvider event={event} sendMessage={sendMessage} finalize={finalize}>
+            <WebSocketConnectionProvider>
                 <Playground />
-            </FakeWebSocketConnectionProvider>
+            </WebSocketConnectionProvider>
         )
 
         // default initial state sets everything to empty
@@ -107,23 +82,15 @@ describe('Playground', () => {
     });
 
     it('renders a specific state correctly', () => {
-        const event: EventData = {
-            type: 'dummy',
-            data: null
-        };
-
-        const sendMessage = (data: any) => { }
-        const finalize = () => { }
-
         const fields = [
             "x", "o", "o",
             "x", "x", "",
             "", "", ""];
 
         renderWithReduxProvider(
-            <FakeWebSocketConnectionProvider event={event} sendMessage={sendMessage} finalize={finalize}>
+            <WebSocketConnectionProvider>
                 <Playground />
-            </FakeWebSocketConnectionProvider>,
+            </WebSocketConnectionProvider>,
             {
                 preloadedState: {
                     info: {
@@ -156,20 +123,11 @@ describe('Playground', () => {
         });
     });
 
-    it('triggers the correct function when we click on an empty cell', () => {
-        let actualSendMessageArgument: MessagePayload | null = null;
-
-        const sendMessage = jest.fn((data: MessagePayload) => {
-            actualSendMessageArgument = data;
-        });
-
+    it('triggers the correct function when we click on an empty cell', async () => {
         renderWithReduxProvider(
-            <FakeWebSocketConnectionProvider event={{
-                type: 'dummy',
-                data: null
-            }} sendMessage={sendMessage} finalize={() => { }}>
+            <WebSocketConnectionProvider>
                 <Playground />
-            </FakeWebSocketConnectionProvider>,
+            </WebSocketConnectionProvider>,
             {
                 preloadedState: {
                     info: {
@@ -191,46 +149,37 @@ describe('Playground', () => {
                     }
                 }
             }
-        )
+        );
+
+        await server.connected;
 
         // default initial state sets everything to empty
         const buttons = screen.getAllByRole('board-button');
         expect(buttons).toHaveLength(9);
 
         fireEvent.click(buttons[0]);
-        expect(sendMessage).toBeCalledTimes(1);
-        expect(actualSendMessageArgument).not.toBeNull();
-        expect(actualSendMessageArgument).not.toBeUndefined();
-        expect(actualSendMessageArgument!.type).toEqual("update");
-        expect(actualSendMessageArgument!.data).toEqual({
-            userId: "user_id",
-            gameId: "game_id",
-            pos: 0, // because that's the position we clicked on
-            char: "x", // because it's player one
-        });
+
+        expect(server).toReceiveMessage(JSON.stringify({
+            type: "update",
+            data: {
+                userId: "user_id",
+                gameId: "game_id",
+                pos: 0,
+                char: "x",
+            },
+        }))
     });
 
-    it('should not trigger any function when we click on a set cell', () => {
+    it('should not trigger any function when we click on a set cell', async () => {
         const fields = [
             "x", "o", "o",
             "x", "x", "",
             "", "", ""];
 
-        let actualSendMessageArgument: MessagePayload | null = null;
-
-        const sendMessage = jest.fn((data: MessagePayload) => {
-            actualSendMessageArgument = data;
-        });
-
         renderWithReduxProvider(
-            <FakeWebSocketConnectionProvider event={{
-                type: 'dummy',
-                data: null
-            }}
-                sendMessage={sendMessage}
-                finalize={() => { }}>
+            <WebSocketConnectionProvider>
                 <Playground />
-            </FakeWebSocketConnectionProvider>,
+            </WebSocketConnectionProvider>,
             {
                 preloadedState: {
                     info: {
@@ -252,31 +201,24 @@ describe('Playground', () => {
                     }
                 }
             }
-        )
+        );
+
+        await server.connected;
 
         // default initial state sets everything to empty
         const buttons = screen.getAllByRole('board-button');
         expect(buttons).toHaveLength(9);
 
         fireEvent.click(buttons[0]);
-        expect(sendMessage).not.toBeCalled();
-        expect(actualSendMessageArgument).toBeNull();
+
+        expect(server).toHaveReceivedMessages([])
     });
 
-    it('marks o when the current player is player two', () => {
-        let actualSendMessageArgument: MessagePayload | null = null;
-
-        const sendMessage = jest.fn((data: MessagePayload) => {
-            actualSendMessageArgument = data;
-        });
-
+    it('marks o when the current player is player two', async () => {
         renderWithReduxProvider(
-            <FakeWebSocketConnectionProvider event={{
-                type: 'dummy',
-                data: null
-            }} sendMessage={sendMessage} finalize={() => { }}>
+            <WebSocketConnectionProvider>
                 <Playground />
-            </FakeWebSocketConnectionProvider>,
+            </WebSocketConnectionProvider>,
             {
                 preloadedState: {
                     info: {
@@ -300,21 +242,23 @@ describe('Playground', () => {
             }
         )
 
+        await server.connected;
+
         // default initial state sets everything to empty
         const buttons = screen.getAllByRole('board-button');
         expect(buttons).toHaveLength(9);
 
         fireEvent.click(buttons[0]);
-        expect(sendMessage).toBeCalledTimes(1);
-        expect(actualSendMessageArgument).not.toBeNull();
-        expect(actualSendMessageArgument).not.toBeUndefined();
-        expect(actualSendMessageArgument!.type).toEqual("update");
-        expect(actualSendMessageArgument!.data).toEqual({
-            userId: "user_id",
-            gameId: "game_id",
-            pos: 0, // because that's the position we clicked on
-            char: "o", // because it's player one
-        });
+
+        expect(server).toReceiveMessage(JSON.stringify({
+            type: "update",
+            data: {
+                userId: "user_id",
+                gameId: "game_id",
+                pos: 0,
+                char: "o",
+            },
+        }))
     });
 
     it('handles server sent events correctly', async () => {
@@ -325,7 +269,7 @@ describe('Playground', () => {
         )
 
         await server.connected;
-        
+
         // handle the register event
         server.send(JSON.stringify({
             type: "register",

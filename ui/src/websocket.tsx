@@ -19,11 +19,6 @@ export interface SocketConnection {
     finalize: () => void
 }
 
-const createWS = (): WebSocket => {
-    console.log(`ws://${process.env.REACT_APP_WS_URL}:${process.env.REACT_APP_WS_PORT}`)
-    return new WebSocket(`ws://${process.env.REACT_APP_WS_URL}:${process.env.REACT_APP_WS_PORT}`)
-};
-
 const WebSocketContext = createContext<SocketConnection>({} as SocketConnection);
 export { WebSocketContext };
 
@@ -33,7 +28,7 @@ export const WebSocketConnectionProvider: FC<WSProviderProps> = ({ children }) =
 
     useEffect(() => {
         if (!wsRef.current) {
-            wsRef.current = createWS();
+            wsRef.current = new WebSocket(`ws://${process.env.REACT_APP_WS_URL}:${process.env.REACT_APP_WS_PORT}`);
             wsRef.current.onmessage = (event: MessageEvent<any>) => {
                 if (event && event.data) {
                     setEvent(JSON.parse(event.data));
