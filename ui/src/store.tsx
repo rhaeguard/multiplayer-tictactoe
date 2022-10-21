@@ -5,7 +5,6 @@ import gameInfoReducer from './reducers/gameInfoSlice';
 const store = configureStore({
     reducer: {
         info: gameInfoReducer,
-        // board: null, 
     }
 });
 
