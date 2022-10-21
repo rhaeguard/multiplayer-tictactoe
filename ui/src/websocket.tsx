@@ -24,7 +24,7 @@ const createWS = (): WebSocket => {
 const WebSocketContext = createContext<SocketConnection>({} as SocketConnection);
 export { WebSocketContext };
 
-export const Provider: FC<WSProviderProps> = ({ children }) => {
+export const WebSocketConnectionProvider: FC<WSProviderProps> = ({ children }) => {
     const wsRef = useRef<WebSocket>()
     const [event, setEvent] = useState<MessageEvent<string>>({} as MessageEvent<string>)
 

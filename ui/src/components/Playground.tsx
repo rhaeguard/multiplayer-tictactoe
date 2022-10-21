@@ -3,6 +3,14 @@ import { ApplicationContainer, DisplayInfo } from "./ApplicationContainer";
 import { BoardContainer } from "./BoardContainer";
 import { WebSocketContext } from "../websocket";
 import { useContext } from "react";
+import { RootState, useAppDispatch, useAppSelector } from "../store";
+import { GameInfo } from "../reducers/gameInfoSlice";
+import {
+    updateUserId,
+    updateGameId,
+    updateBoardLock,
+    updateIsPlayerOne
+} from '../reducers/gameInfoSlice';
 
 const WIN_COLOR = `#8bc34a`;
 const LOSS_COLOR = `#ff5722a6`;
@@ -33,13 +41,10 @@ class GameUpdate {
 export const Playground: FC = () => {
     const { event, sendMessage, finalize } = useContext(WebSocketContext);
 
-    const [isPlayerOne, setIsPlayerOne] = useState(true);
-    const [isBoardLocked, setBoardLocked] = useState(true);
+    const { isPlayerOne, isBoardLocked, userId, gameId }: GameInfo = useAppSelector((state: RootState) => state.info);
+    const dispatch = useAppDispatch();
+
     const [fields, setFields] = useState<string[]>(EMPTY_BOARD);
-
-    const [userId, setUserId] = useState<string | null>(null);
-    const [gameId, setGameId] = useState<string | null>(null);
-
     const [displayInfo, setDisplayInfo] = useState<DisplayInfo>({
         left: {
             title: "player 1",
@@ -88,18 +93,19 @@ export const Playground: FC = () => {
             },
         });
         setFields(data.board);
-        setIsPlayerOne(amPlayerOne);
-        setBoardLocked(data.isBoardLocked);
+
+        dispatch(updateIsPlayerOne(amPlayerOne));
+        dispatch(updateBoardLock(data.isBoardLocked));
     };
 
     useEffect(() => {
         // handle server sent event
         const { type, data } = event;
         if (type === "register") {
-            setUserId(data.id);
+            dispatch(updateUserId(data.id));
         } else if (type === "start") {
             const { board, amPlayerOne, gameId, myTurn } = data;
-            setGameId(gameId);
+            dispatch(updateGameId(gameId));
 
             handleGameUpdate(new GameUpdate(
                 board,
