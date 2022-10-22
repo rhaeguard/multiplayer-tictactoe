@@ -66,10 +66,10 @@ const createNewMessage = (type: WebSocketActionType, data: any) => JSON.stringif
 type UserId = string;
 
 class WebSocketHandler {
-    allSocketsByUserId: { [key: UserId]: WebSocket };
-    currentlyUnmatchedUsers: { [key: UserId]: boolean };
-    matchedUp: { [key: UserId]: string }; // TODO: maybe update type, maybe userId should be a type
-    gameStates: { [key: string]: Game };
+    private allSocketsByUserId: { [key: UserId]: WebSocket };
+    private currentlyUnmatchedUsers: { [key: UserId]: boolean };
+    private matchedUp: { [key: UserId]: string }; // TODO: maybe update type, maybe userId should be a type
+    private gameStates: { [key: string]: Game };
 
     constructor() {
         this.allSocketsByUserId = {};
@@ -98,7 +98,6 @@ class WebSocketHandler {
 
     sendToUser(currentUserId: UserId, data: string) {
         try {
-            console.log(Object.keys(this.allSocketsByUserId))
             this.allSocketsByUserId[currentUserId].send(data);
         } catch (err) {
             console.log(err)
@@ -131,7 +130,6 @@ class WebSocketHandler {
         const { type, data } = JSON.parse(message);
         if (type === "update") {
             const { userId, gameId, pos, char } = data;
-            console.log(`User[${userId}] received a message: ${message} : : ${Object.keys(this.allSocketsByUserId)}`)
 
             this.gameStates[gameId].board[pos] = char;
 
@@ -232,12 +230,12 @@ class WebSocketHandler {
         this.allSocketsByUserId[currentUserId] = ws;
         this.currentlyUnmatchedUsers[currentUserId] = true;
 
-        console.log(`User[${currentUserId}] created: ${Object.keys(this.allSocketsByUserId)}`)
+        console.log(`User[${currentUserId}] created`)
 
         this.findMatchup(currentUserId);
 
         ws.on("close", () => this.handleClose(currentUserId));
-        ws.on("message", this.handleClientSentEvent);
+        ws.on("message", (message: string) => this.handleClientSentEvent(message));
     }
 }
 

@@ -1,0 +1,19 @@
+version: '3'
+services:
+  backend:
+    build: backend/
+    ports:
+      - 8889:8889
+    environment:
+      - WS_ENDPOINT=0.0.0.0
+      - WS_PORT=8889
+  ui:
+    build:
+      context: ui/
+      args:
+        - WS_ENDPOINT=127.0.0.1
+        - WS_PORT=8889
+    ports:
+      - 3000:3000
+    depends_on:
+      - backend
