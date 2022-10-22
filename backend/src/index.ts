@@ -3,7 +3,9 @@ import { v4 as uuid } from "uuid";
 
 require('dotenv').config();
 
-const getCurrentGameState = (array: string[]) => {
+type GameState = "win" | "draw" | "in_progress"
+
+const getCurrentGameState = (array: string[]): GameState => {
     // 0 1 2
     // 3 4 5
     // 6 7 8
@@ -39,15 +41,6 @@ const getCurrentGameState = (array: string[]) => {
     return "in_progress";
 };
 
-const findGameId = (userId: string, allGameStates: { [key: string]: Game }) => {
-    for (let id in allGameStates) {
-        if (allGameStates[id].playerOne === userId || allGameStates[id].playerTwo === userId) {
-            return id;
-        }
-    }
-    return null;
-}
-
 interface Game {
     board: string[],
     isPlayerOne: boolean,
@@ -66,16 +59,27 @@ const createNewGame = (p1id: string, p2id: string): Game => {
     };
 };
 
-const createNewMessage = (type: string, data: any) => JSON.stringify({ type, data });
+type WebSocketActionType = "start" | "stop" | "register";
 
-async function main() {
-    const allSocketsByUserId: { [key: string]: WebSocket } = {};
-    const currentlyUnmatchedUsers: { [key: string]: boolean } = {};
-    const matchedUp: { [key: string]: string } = {}; // TODO: maybe update type, maybe userId should be a type
-    const gameStates: { [key: string]: Game } = {};
+const createNewMessage = (type: WebSocketActionType, data: any) => JSON.stringify({ type, data });
 
-    const findOpponentFor = (currentUserId: string) => {
-        for (let opponentId in currentlyUnmatchedUsers) {
+type UserId = string;
+
+class WebSocketHandler {
+    allSocketsByUserId: { [key: UserId]: WebSocket };
+    currentlyUnmatchedUsers: { [key: UserId]: boolean };
+    matchedUp: { [key: UserId]: string }; // TODO: maybe update type, maybe userId should be a type
+    gameStates: { [key: string]: Game };
+
+    constructor() {
+        this.allSocketsByUserId = {};
+        this.currentlyUnmatchedUsers = {};
+        this.matchedUp = {};
+        this.gameStates = {};
+    }
+
+    findOpponentFor(currentUserId: UserId) {
+        for (let opponentId in this.currentlyUnmatchedUsers) {
             if (opponentId !== currentUserId) {
                 return opponentId;
             }
@@ -83,148 +87,168 @@ async function main() {
         return null;
     };
 
-    const sendToUser = (currentUserId: string, data: string) => {
+    findGameId(userId: UserId) {
+        for (let id in this.gameStates) {
+            if (this.gameStates[id].playerOne === userId || this.gameStates[id].playerTwo === userId) {
+                return id;
+            }
+        }
+        return null;
+    }
+
+    sendToUser(currentUserId: UserId, data: string) {
         try {
-            console.log(Object.keys(allSocketsByUserId))
-            allSocketsByUserId[currentUserId].send(data);
+            console.log(Object.keys(this.allSocketsByUserId))
+            this.allSocketsByUserId[currentUserId].send(data);
         } catch (err) {
             console.log(err)
             console.log(`User[${currentUserId}] does not exist`)
         }
     };
 
-    const wss = new WebSocketServer({ host: process.env.WS_ENDPOINT, port: parseInt(process.env.WS_PORT!) });
+    handleClose(currentUserId: UserId) {
+        // the user disconnected which means the opponent has won!
+        const gameId = this.findGameId(currentUserId);
 
-    console.log(`Listening on ${process.env.WS_ENDPOINT}:${process.env.WS_PORT}...`)
+        if (gameId && !this.gameStates[gameId].isFinished) {
+            const opponentId = [this.gameStates[gameId].playerOne, this.gameStates[gameId].playerTwo].find((x) => x !== currentUserId)
 
-    wss.on("connection", (ws) => {
-        const currentUserId = uuid();
+            if (gameId) {
+                this.sendToUser(opponentId!, createNewMessage("stop", {
+                    board: this.gameStates[gameId].board,
+                    status: "win",
+                    amPlayerOne: this.gameStates[gameId].playerOne === opponentId,
+                }))
+            }
+        }
 
-        ws.send(createNewMessage("register", { id: currentUserId }));
+        delete this.allSocketsByUserId[currentUserId];
+        delete this.currentlyUnmatchedUsers[currentUserId];
+        console.log(`User[${currentUserId}] disconnected`)
+    }
 
-        allSocketsByUserId[currentUserId] = ws;
-        currentlyUnmatchedUsers[currentUserId] = true;
+    handleClientSentEvent(message: string) {
+        const { type, data } = JSON.parse(message);
+        if (type === "update") {
+            const { userId, gameId, pos, char } = data;
+            console.log(`User[${userId}] received a message: ${message} : : ${Object.keys(this.allSocketsByUserId)}`)
 
-        console.log(`User[${currentUserId}] created: ${Object.keys(allSocketsByUserId)}`)
+            this.gameStates[gameId].board[pos] = char;
 
-        ws.on("close", () => {
-            // the user disconnected which means the opponent has won!
-            const gameId = findGameId(currentUserId, gameStates);
+            const opponentId = this.matchedUp[userId];
+            let opponentData;
+            let currentSender;
 
-            if (gameId && !gameStates[gameId].isFinished) {
-                const opponentId = [gameStates[gameId].playerOne, gameStates[gameId].playerTwo].find((x) => x !== currentUserId)
+            const state = getCurrentGameState(this.gameStates[gameId].board);
 
-                if (gameId) {
-                    sendToUser(opponentId!, createNewMessage("stop", {
-                        board: gameStates[gameId].board,
-                        status: "win",
-                        amPlayerOne: gameStates[gameId].playerOne === opponentId,
-                    }))
+            if (state === "in_progress") {
+                opponentData = createNewMessage("start", {
+                    gameId,
+                    amPlayerOne: this.gameStates[gameId].playerOne === opponentId,
+                    myTurn: true,
+                    board: this.gameStates[gameId].board,
+                });
+
+                currentSender = createNewMessage("start", {
+                    gameId,
+                    amPlayerOne: this.gameStates[gameId].playerOne === userId,
+                    myTurn: false,
+                    board: this.gameStates[gameId].board,
+                });
+            } else {
+                let opponentStatus, currentSenderStatus;
+                if (state === "win") {
+                    opponentStatus = "loss";
+                    currentSenderStatus = "win";
+                } else {
+                    opponentStatus = "draw";
+                    currentSenderStatus = "draw";
                 }
+
+                // the game has finished
+                this.gameStates[gameId].isFinished = true;
+
+                opponentData = createNewMessage("stop", {
+                    board: this.gameStates[gameId].board,
+                    status: opponentStatus,
+                    amPlayerOne: this.gameStates[gameId].playerOne === opponentId,
+                });
+
+                currentSender = createNewMessage("stop", {
+                    board: this.gameStates[gameId].board,
+                    status: currentSenderStatus,
+                    amPlayerOne: this.gameStates[gameId].playerOne === userId,
+                });
             }
 
-            delete allSocketsByUserId[currentUserId];
-            delete currentlyUnmatchedUsers[currentUserId];
-            console.log(`User[${currentUserId}] disconnected`)
-        });
+            // send to both
+            this.sendToUser(opponentId, opponentData);
+            this.sendToUser(userId, currentSender);
+        }
+    }
 
-        const opponentId = findOpponentFor(currentUserId);
+    findMatchup(currentUserId: string) {
+        const opponentId = this.findOpponentFor(currentUserId);
         if (opponentId) {
             console.log(`User[${currentUserId}] found a matchup in ${opponentId}`)
             // match them up
-            matchedUp[opponentId] = currentUserId;
-            matchedUp[currentUserId] = opponentId;
+            this.matchedUp[opponentId] = currentUserId;
+            this.matchedUp[currentUserId] = opponentId;
             // and remove them from the queue where others wait for a matchup
-            delete currentlyUnmatchedUsers[opponentId];
-            delete currentlyUnmatchedUsers[currentUserId];
+            delete this.currentlyUnmatchedUsers[opponentId];
+            delete this.currentlyUnmatchedUsers[currentUserId];
 
             const gameId = uuid();
-            gameStates[gameId] = createNewGame(opponentId, currentUserId);
+            this.gameStates[gameId] = createNewGame(opponentId, currentUserId);
 
-            sendToUser(
+            this.sendToUser(
                 opponentId,
                 createNewMessage("start", {
                     gameId,
                     amPlayerOne: true,
                     myTurn: true,
-                    board: gameStates[gameId].board,
+                    board: this.gameStates[gameId].board,
                 })
             );
 
-            sendToUser(
+            this.sendToUser(
                 currentUserId,
                 createNewMessage("start", {
                     gameId,
-                    board: gameStates[gameId].board,
+                    board: this.gameStates[gameId].board,
                     amPlayerOne: false,
                     myTurn: false,
                 })
             );
 
         }
+    }
 
-        ws.on("message", (message: string) => {
-            const { type, data } = JSON.parse(message);
-            if (type === "update") {
-                const { userId, gameId, pos, char } = data;
-                console.log(`User[${userId}] received a message: ${message} : : ${Object.keys(allSocketsByUserId)}`)
+    handleWs(ws: WebSocket) {
+        const currentUserId = uuid();
 
-                gameStates[gameId].board[pos] = char;
+        ws.send(createNewMessage("register", { id: currentUserId }));
 
-                const opponentId = matchedUp[userId];
-                let opponentData;
-                let currentSender;
+        this.allSocketsByUserId[currentUserId] = ws;
+        this.currentlyUnmatchedUsers[currentUserId] = true;
 
-                const state = getCurrentGameState(gameStates[gameId].board);
+        console.log(`User[${currentUserId}] created: ${Object.keys(this.allSocketsByUserId)}`)
 
-                if (state === "in_progress") {
-                    opponentData = createNewMessage("start", {
-                        gameId,
-                        amPlayerOne:
-                            gameStates[gameId].playerOne === opponentId,
-                        myTurn: true,
-                        board: gameStates[gameId].board,
-                    });
+        this.findMatchup(currentUserId);
 
-                    currentSender = createNewMessage("start", {
-                        gameId,
-                        amPlayerOne: gameStates[gameId].playerOne === userId,
-                        myTurn: false,
-                        board: gameStates[gameId].board,
-                    });
-                } else {
-                    let opponentStatus, currentSenderStatus;
-                    if (state === "win") {
-                        opponentStatus = "loss";
-                        currentSenderStatus = "win";
-                    } else {
-                        opponentStatus = "draw";
-                        currentSenderStatus = "draw";
-                    }
+        ws.on("close", () => this.handleClose(currentUserId));
+        ws.on("message", this.handleClientSentEvent);
+    }
+}
 
-                    // the game has finished
-                    gameStates[gameId].isFinished = true;
+async function main() {
+    const wss = new WebSocketServer({ host: process.env.WS_ENDPOINT, port: parseInt(process.env.WS_PORT!) });
 
-                    opponentData = createNewMessage("stop", {
-                        board: gameStates[gameId].board,
-                        status: opponentStatus,
-                        amPlayerOne:
-                            gameStates[gameId].playerOne === opponentId,
-                    });
+    console.log(`Listening on ${process.env.WS_ENDPOINT}:${process.env.WS_PORT}...`)
 
-                    currentSender = createNewMessage("stop", {
-                        board: gameStates[gameId].board,
-                        status: currentSenderStatus,
-                        amPlayerOne: gameStates[gameId].playerOne === userId,
-                    });
-                }
+    const handler = new WebSocketHandler();
 
-                // send to both
-                sendToUser(opponentId, opponentData);
-                sendToUser(userId, currentSender);
-            }
-        });
-    });
+    wss.on("connection", (ws) => handler.handleWs(ws));
 }
 
 main();

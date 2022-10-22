@@ -1,12 +1,8 @@
 # Multiplayer TicTacToe
 
-This is how it looks when two players are connected and the game has started.
+This is how the game play is, after matching up with a user.
 
-![](./assets/first.PNG)
-
-This is how it looks when the game is in progress.
-
-![](./assets/second.PNG)
+![](./assets/gameplay.gif)
 
 # Running
 
