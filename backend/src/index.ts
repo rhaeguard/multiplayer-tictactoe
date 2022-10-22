@@ -1,14 +1,14 @@
-const { WebSocketServer } = require("ws");
-const { v4: uuid } = require("uuid");
+import { WebSocket, WebSocketServer } from "ws";
+import { v4 as uuid } from "uuid";
 
 require('dotenv').config();
 
-const getCurrentGameState = (array) => {
+const getCurrentGameState = (array: string[]) => {
     // 0 1 2
     // 3 4 5
     // 6 7 8
 
-    const check = (pos) => {
+    const check = (pos: number[]) => {
         const x = pos.map((p) => array[p]).filter((x) => x !== "");
         return x.length === 3 && new Set(x).size === 1;
     };
@@ -39,7 +39,7 @@ const getCurrentGameState = (array) => {
     return "in_progress";
 };
 
-const findGameId = (userId, allGameStates) => {
+const findGameId = (userId: string, allGameStates: { [key: string]: Game }) => {
     for (let id in allGameStates) {
         if (allGameStates[id].playerOne === userId || allGameStates[id].playerTwo === userId) {
             return id;
@@ -48,7 +48,15 @@ const findGameId = (userId, allGameStates) => {
     return null;
 }
 
-const createNewGame = (p1id, p2id) => {
+interface Game {
+    board: string[],
+    isPlayerOne: boolean,
+    playerOne: string,
+    playerTwo: string,
+    isFinished: boolean
+}
+
+const createNewGame = (p1id: string, p2id: string): Game => {
     return {
         board: new Array(9).fill(""),
         isPlayerOne: true,
@@ -58,15 +66,15 @@ const createNewGame = (p1id, p2id) => {
     };
 };
 
-const createNewMessage = (type, data) => JSON.stringify({ type, data });
+const createNewMessage = (type: string, data: any) => JSON.stringify({ type, data });
 
 async function main() {
-    const allSocketsByUserId = {};
-    const currentlyUnmatchedUsers = {};
-    const matchedUp = {};
-    const gameStates = {};
+    const allSocketsByUserId: { [key: string]: WebSocket } = {};
+    const currentlyUnmatchedUsers: { [key: string]: boolean } = {};
+    const matchedUp: { [key: string]: string } = {}; // TODO: maybe update type, maybe userId should be a type
+    const gameStates: { [key: string]: Game } = {};
 
-    const findOpponentFor = (currentUserId) => {
+    const findOpponentFor = (currentUserId: string) => {
         for (let opponentId in currentlyUnmatchedUsers) {
             if (opponentId !== currentUserId) {
                 return opponentId;
@@ -75,7 +83,7 @@ async function main() {
         return null;
     };
 
-    const sendToUser = (currentUserId, data) => {
+    const sendToUser = (currentUserId: string, data: string) => {
         try {
             console.log(Object.keys(allSocketsByUserId))
             allSocketsByUserId[currentUserId].send(data);
@@ -85,7 +93,7 @@ async function main() {
         }
     };
 
-    const wss = new WebSocketServer({ host: process.env.WS_ENDPOINT, port: process.env.WS_PORT });
+    const wss = new WebSocketServer({ host: process.env.WS_ENDPOINT, port: parseInt(process.env.WS_PORT!) });
 
     console.log(`Listening on ${process.env.WS_ENDPOINT}:${process.env.WS_PORT}...`)
 
@@ -107,7 +115,7 @@ async function main() {
                 const opponentId = [gameStates[gameId].playerOne, gameStates[gameId].playerTwo].find((x) => x !== currentUserId)
 
                 if (gameId) {
-                    sendToUser(opponentId, createNewMessage("stop", {
+                    sendToUser(opponentId!, createNewMessage("stop", {
                         board: gameStates[gameId].board,
                         status: "win",
                         amPlayerOne: gameStates[gameId].playerOne === opponentId,
@@ -155,7 +163,7 @@ async function main() {
 
         }
 
-        ws.on("message", (message) => {
+        ws.on("message", (message: string) => {
             const { type, data } = JSON.parse(message);
             if (type === "update") {
                 const { userId, gameId, pos, char } = data;
